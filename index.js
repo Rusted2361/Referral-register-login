@@ -2,7 +2,7 @@ require('dotenv').config(); // Load environment variables from .env file
 
 const express = require("express");
 const path = require("path");
-const User = require("./config"); // Import the User model
+const User = require("./models/config"); // Import the User model
 const bcrypt = require('bcrypt');
 
 const app = express();
@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: false }));
 //use EJS as the view engine
 app.set("view engine", "ejs");
 
-app.get("/", (req, res) => {
+app.get("/login", (req, res) => {
     res.render("login");
 });
 
@@ -26,6 +26,10 @@ app.get("/signup", (req, res) => {
 
 app.get("/get-referrer", (req, res) => {
     res.render("getreferrer");
+});
+
+app.get("/generate-referral-link", (req, res) => {
+    res.render("home");
 });
 
 app.get("/invite/:referralWalletAddress", (req, res) => {
@@ -105,6 +109,16 @@ app.post("/get-referrer", async (req, res) => {
         // If an error occurs, send a response with the error message
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+app.post("/generate-referral-link", (req, res) => {
+    const walletAddress = req.body.walletAddress;
+
+    // Assuming you have a function to generate the referral link, you can replace the next line with your logic
+    const referralLink = `storagechain/invite/${walletAddress}`;
+
+    // Render a template with the generated referral link
+    res.render("generated-link", { referralLink });
 });
 
 
