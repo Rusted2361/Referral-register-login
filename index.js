@@ -1,101 +1,87 @@
-require('dotenv').config(); // Load environment variables from .env file
+// Load environment variables
+require('dotenv').config();
 
+// Import required modules
 const express = require("express");
 const path = require("path");
 const User = require("./models/config"); // Import the User model
 const bcrypt = require('bcrypt');
 
+// Create an Express application
 const app = express();
-// convert data into json format
+
+// Set up middleware
 app.use(express.json());
-
-// Static file
-app.use(express.static("public"));
-
 app.use(express.urlencoded({ extended: false }));
-//use EJS as the view engine
+app.use(express.static("public"));
 app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
-app.get("/login", (req, res) => {
-    res.render("login");
+// Define routes
+
+app.get("/", (req, res) => {
+    // Render the home.ejs template and pass the user and referral wallet addresses as variables
+    res.render("home");
+});
+
+app.get("/generate-referral-link", (req, res) => {
+    res.render("generate-link");
+});
+
+app.get("/invite/:referralWalletAddress", (req, res) => {
+    const referralWalletAddress = req.params.referralWalletAddress;
+    res.render("referral", { referralWalletAddress });
 });
 
 app.get("/signup", (req, res) => {
-    res.render("signup");
+    const referralWalletAddress = req.params.referralWalletAddress;
+    res.render("referral", { referralWalletAddress });
 });
 
 app.get("/get-referrer", (req, res) => {
     res.render("getreferrer");
 });
 
-app.get("/generate-referral-link", (req, res) => {
-    res.render("home");
-});
-
-app.get("/invite/:referralWalletAddress", (req, res) => {
-    // Extract the referral wallet address from the URL parameters
-    const referralWalletAddress = req.params.referralWalletAddress;
-    // Render the referral.ejs template and pass referralWalletAddress as a variable
-    res.render("referral", { referralWalletAddress });
-});
-
 // Register User
 app.post("/signup", async (req, res) => {
-    const data = {
-        name: req.body.username,
-        email: req.body.email,
-        password: req.body.password,
-        referralWalletAddress: req.body.referralWalletAddress // Include referralWalletAddress if provided
+    const userData = {
+        userWalletAddress: req.body.userWalletAddress,
+        referralWalletAddress: req.body.referralWalletAddress
     }
 
-    // Check if the username already exists in the database
-    const existingUser = await User.findOne({ name: data.name });
-
-    if (existingUser) {
-        res.send('User already exists. Please choose a different username.');
-    } else {
-        // Hash the password using bcrypt
-        const saltRounds = 10; // Number of salt rounds for bcrypt
-        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
-
-        data.password = hashedPassword; // Replace the original password with the hashed one
-
-        const userdata = await User.insertMany(data);
-        console.log(userdata);
-        res.render("home");
-    }
-});
-
-
-// Login user 
-app.post("/login", async (req, res) => {
     try {
-        const check = await User.findOne({ name: req.body.username });
-        if (!check) {
-            res.send("User name cannot found")
+        // Check if the user already exists in the database based on userWalletAddress
+        const existingUser = await User.findOne({ userWalletAddress: userData.userWalletAddress });
+
+        if (existingUser) {
+            return res.send('User already exists. Please choose a different user wallet address.');
+        } else {
+            // Create a new user document with the provided data
+            const newUser = new User(userData);
+
+            // Save the new user to the database
+            await newUser.save();
+
+            console.log('User registered successfully:', newUser);
+            res.render("getreferrer");
         }
-        // Compare the hashed password from the database with the plaintext password
-        const isPasswordMatch = await bcrypt.compare(req.body.password, check.password);
-        if (!isPasswordMatch) {
-            res.send("wrong Password");
-        }
-        else {
-            res.render("home");
-        }
-    }
-    catch {
-        res.send("wrong Details");
+    } catch (error) {
+        console.error('Error registering user:', error);
+        res.status(500).send('Error registering user. Please try again later.');
     }
 });
+
 
 // Route to check if a user with the provided name exists and has a referral wallet address
 app.post("/get-referrer", async (req, res) => {
     try {
-        // Extract name from request body
-        const userName = req.body.name;
+        // Extract user wallet address from request body
+        const userWalletAddress = req.body.userWalletAddress;
+        console.log('User wallet address:', userWalletAddress);
 
-        // Query the database to find a user with the provided name
-        const user = await User.findOne({ name: userName });
+        // Query the database to find a user with the provided user wallet address
+        const user = await User.findOne({ userWalletAddress });
+        console.log('User:', user);
 
         // Check if a user is found and they have a referral wallet address
         if (user && user.referralWalletAddress) {
@@ -103,7 +89,7 @@ app.post("/get-referrer", async (req, res) => {
             res.json({ success: true, referralWalletAddress: user.referralWalletAddress });
         } else {
             // If no user is found or the user does not have a referral wallet address, send a response indicating failure
-            res.json({ success: false, message: "No referrer found for the provided name." });
+            res.json({ success: false, message: "No referrer found for the provided user wallet address." });
         }
     } catch (error) {
         // If an error occurs, send a response with the error message
@@ -111,11 +97,12 @@ app.post("/get-referrer", async (req, res) => {
     }
 });
 
+
 app.post("/generate-referral-link", (req, res) => {
     const walletAddress = req.body.walletAddress;
 
     // Assuming you have a function to generate the referral link, you can replace the next line with your logic
-    const referralLink = `storagechain/invite/${walletAddress}`;
+    const referralLink = `cosmosino/invite/${walletAddress}`;
 
     // Render a template with the generated referral link
     res.render("generated-link", { referralLink });

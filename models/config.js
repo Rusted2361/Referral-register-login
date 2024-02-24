@@ -10,21 +10,12 @@ connect.then(() => {
 }).catch(() => {
     console.log("Database cannot be Connected");
 });
-
 // Define the user schema
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    email: {
+    userWalletAddress: {
         type: String,
         required: true,
         unique: true
-    },
-    password: {
-        type: String,
-        required: true
     },
     referralWalletAddress: {
         type: String
