@@ -10,7 +10,8 @@
 
     <div class="form-container">
         <h2>SignUp with Referral</h2>
-        <form action="/signup" method="post">
+        <!-- Dynamically set the form action to the current URL -->
+        <form id="signupForm" method="post">
             <!-- User Wallet Address field -->
             <div class="form-group">
                 <label for="userWalletAddress">Your Wallet Address:</label>
@@ -25,6 +26,15 @@
             <button type="submit" class="submit-btn">Submit</button>
         </form>
     </div>
+
+    <!-- JavaScript to dynamically set the form action -->
+    <script>
+        // Get the current URL
+        const currentURL = window.location.href;
+
+        // Update the form action with the current URL
+        document.getElementById('signupForm').action = currentURL;
+    </script>
 
 </body>
 </html>

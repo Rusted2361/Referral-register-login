@@ -1,28 +1,40 @@
 require('dotenv').config(); // Load environment variables from .env file
-const mongoose = require('mongoose');
+const { Sequelize, DataTypes } = require('sequelize');
 
-// Connect to the database using the DB_URI environment variable
-const connect = mongoose.connect(process.env.DB_URI);
-
-// Check if the database is connected successfully
-connect.then(() => {
-    console.log("Database Connected Successfully");
-}).catch(() => {
-    console.log("Database cannot be Connected");
+// Create a Sequelize instance with the connection details from the environment variables
+const sequelize = new Sequelize(process.env.DB_URI, {
+  dialect: 'postgres', // Specify the dialect as PostgreSQL
+  logging: false, // Disable logging for production
 });
-// Define the user schema
-const userSchema = new mongoose.Schema({
+ 
+// Define the User model
+const User = sequelize.define('User', {
     userWalletAddress: {
-        type: String,
-        required: true,
-        unique: true
+        type: DataTypes.STRING, // Adjust the data type as per your requirement
+        allowNull: false,
+        field: 'userWalletAddress' // Specify the column name explicitly
     },
     referralWalletAddress: {
-        type: String
+        type: DataTypes.STRING, // Adjust the data type as per your requirement
+        allowNull: false,
+        field: 'referralWalletAddress' // Specify the column name explicitly
+    },
+}, {
+  tableName: 'users', // Specify the correct table name here
+});  
+
+// Synchronize the model with the database to create the table if it doesn't exist
+(async () => {
+    try {
+        await sequelize.sync();
+        console.log('Users table created successfully.');
+    } catch (error) {
+        console.error('Error creating users table:', error);
     }
-});
+})();
 
-// Create the User model
-const User = mongoose.model("User", userSchema);
-
-module.exports = User;
+// Export the Sequelize instance and the User model
+module.exports = {
+  sequelize,
+  User,
+};

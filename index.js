@@ -4,7 +4,7 @@ require('dotenv').config();
 // Import required modules
 const express = require("express");
 const path = require("path");
-const User = require("./models/config"); // Import the User model
+const { User, sequelize } = require("./models/config"); // Import the User model from Sequelize
 const bcrypt = require('bcrypt');
 
 // Create an Express application
@@ -16,6 +16,16 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static("public"));
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+
+// Check database connection
+(async () => {
+    try {
+        await sequelize.authenticate();
+        console.log('Database connection has been established successfully.');
+    } catch (error) {
+        console.error('Unable to connect to the database:', error);
+    }
+})();
 
 // Define routes
 
@@ -33,44 +43,36 @@ app.get("/invite/:referralWalletAddress", (req, res) => {
     res.render("referral", { referralWalletAddress });
 });
 
-app.get("/signup", (req, res) => {
-    const referralWalletAddress = req.params.referralWalletAddress;
-    res.render("referral", { referralWalletAddress });
-});
+// app.get("/signup", (req, res) => {
+//     res.render("getreferrer");
+// });
 
 app.get("/get-referrer", (req, res) => {
     res.render("getreferrer");
 });
 
 // Register User
-app.post("/signup", async (req, res) => {
-    const userData = {
-        userWalletAddress: req.body.userWalletAddress,
-        referralWalletAddress: req.body.referralWalletAddress
-    }
+app.post("/invite/:referralWalletAddress", async (req, res) => {
+    const { userWalletAddress, referralWalletAddress } = req.body; // Destructure user data from request body
 
     try {
         // Check if the user already exists in the database based on userWalletAddress
-        const existingUser = await User.findOne({ userWalletAddress: userData.userWalletAddress });
-
+        const existingUser = await User.findOne({ where: { userWalletAddress } });
         if (existingUser) {
+            console.log('User already exists.');
             return res.send('User already exists. Please choose a different user wallet address.');
-        } else {
-            // Create a new user document with the provided data
-            const newUser = new User(userData);
-
-            // Save the new user to the database
-            await newUser.save();
-
-            console.log('User registered successfully:', newUser);
-            res.render("getreferrer");
         }
+
+        // Create a new user record in the database
+        const newUser = await User.create({ userWalletAddress, referralWalletAddress });
+
+        console.log('User registered successfully:', newUser.toJSON());
+        res.render("getreferrer");
     } catch (error) {
         console.error('Error registering user:', error);
         res.status(500).send('Error registering user. Please try again later.');
     }
 });
-
 
 // Route to check if a user with the provided name exists and has a referral wallet address
 app.post("/get-referrer", async (req, res) => {
@@ -80,7 +82,7 @@ app.post("/get-referrer", async (req, res) => {
         console.log('User wallet address:', userWalletAddress);
 
         // Query the database to find a user with the provided user wallet address
-        const user = await User.findOne({ userWalletAddress });
+        const user = await User.findOne({ where: { userWalletAddress } });
         console.log('User:', user);
 
         // Check if a user is found and they have a referral wallet address
@@ -97,7 +99,6 @@ app.post("/get-referrer", async (req, res) => {
     }
 });
 
-
 app.post("/generate-referral-link", (req, res) => {
     const walletAddress = req.body.walletAddress;
 
@@ -107,7 +108,6 @@ app.post("/generate-referral-link", (req, res) => {
     // Render a template with the generated referral link
     res.render("generated-link", { referralLink });
 });
-
 
 // Define Port for Application
 const port = process.env.PORT || 5000; // Use PORT environment variable if set, otherwise use 5000

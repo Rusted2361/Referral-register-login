@@ -9,7 +9,9 @@
     "ejs": "^3.1.9",
     "express.js": "^1.0.0",
     "mongoose": "^7.4.1",
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.0.3",
+    "pg": "^8.11.3",
+    "sequelize": "^6.37.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
